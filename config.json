@@ -1,0 +1,6 @@
+{
+    "SENDGRID_API_KEY": "****",
+    "EMAIL_SENDER": "****",
+    "EMAIL_RECEIVER": "*****",
+    "VIDEO_PATH": "assets/video1.mp4"
+}
