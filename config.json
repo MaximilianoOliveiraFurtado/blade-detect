@@ -1,6 +1,10 @@
 {
-    "SENDGRID_API_KEY": "****",
-    "EMAIL_SENDER": "****",
+    "SENDGRID_API_KEY": "*****",
+    "EMAIL_SENDER": "*****",
     "EMAIL_RECEIVER": "*****",
-    "VIDEO_PATH": "assets/video1.mp4"
+    "VIDEO_PATH": "assets/video1.mp4",
+    "FRAME_SKIP_RATE": 1,
+    "DETECTION_THRESHOLD": 1,
+    "CHANGE_RESOLUTION": false,
+    "BORDER_PROCESSOR": false
 }
