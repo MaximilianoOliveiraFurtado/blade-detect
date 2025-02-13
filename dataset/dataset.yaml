@@ -1,3 +1,4 @@
+
 path: /home/sylens/Repositories/AI/pos/trabalhos/blade-detect/dataset
 train: /home/sylens/Repositories/AI/pos/trabalhos/blade-detect/dataset/images/train
 val: /home/sylens/Repositories/AI/pos/trabalhos/blade-detect/dataset/images/val

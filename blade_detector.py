@@ -23,21 +23,17 @@ VIDEO_PATH = config.get("VIDEO_PATH", "assets/video1.mp4")  # Caminho do vídeo
 CHANGE_RESOLUTION = config.get("CHANGE_RESOLUTION", False)
 BORDER_PROCESSOR = config.get("BORDER_PROCESSOR", False)
 
-# Configuração do modelo YOLOv8 pré-treinado
-# model = YOLO("yolov8n.pt")  # Modelo leve pré-treinado
-model = YOLO("runs/detect/train2/weights/best.pt") # Caminho do modelo treinado
+# Configuração do modelo YOLOv8
+model = YOLO("runs/detect/train/weights/best.pt")  # Modelo treinado
 
 # Classe que queremos detectar (baseado em COCO)
-CUTTING_OBJECTS = {44: "bottle", 49: "knife", 50: "scissors"}  # IDs de facas e tesouras no COCO
+CUTTING_OBJECTS = {44: "bottle", 0: "knife", 50: "scissors"}  # IDs de facas e tesouras no COCO -> mudar knife para 49 caso o modelo seja pré-teinado
 
 def send_alert(detected_objects):
     """Envia um alerta por e-mail informando se foram encontrados ou não objetos cortantes."""
     if detected_objects:
         subject = "⚠️ Alerta: Objetos cortantes detectados!"
         body = f"Os seguintes objetos foram detectados: {', '.join(detected_objects)}."
-    else:
-        subject = "✅ Nenhum objeto cortante detectado"
-        body = "Nenhum objeto cortante foi encontrado no vídeo."
     
     data = {
         "personalizations": [{"to": [{"email": EMAIL_RECEIVER}]}],
@@ -58,7 +54,7 @@ def send_alert(detected_objects):
     else:
         print("[ERRO] Falha ao enviar e-mail:", response.text)
 
-# Verificar se o vídeo existe
+# Verifica se o vídeo existe
 if not os.path.exists(VIDEO_PATH):
     print(f"[ERRO] Arquivo de vídeo não encontrado no caminho: {VIDEO_PATH}")
     exit(1)
@@ -78,21 +74,21 @@ while cap.isOpened():
         break
     
     frame_count += 1
-    if frame_count % FRAME_SKIP_RATE != 0:  # Processa de acordo com a taxa configurada
+    if frame_count % FRAME_SKIP_RATE != 0:
         continue
-    
+
     # Aumenta a resolução do frame para melhorar detecção
     if CHANGE_RESOLUTION:
-        frame = cv2.resize(frame, (1280, 720))  # Ajuste conforme necessário
+        frame = cv2.resize(frame, (1280, 720))
 
-    # Aplicar pré-processamento para realçar bordas da lâmina
+    # Aplica pré-processamento para realçar bordas da lâmina
     if BORDER_PROCESSOR:
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Converte para escala de cinza
-        edges = cv2.Canny(gray, 50, 150)  # Aplica detector de bordas
-        frame = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)  # Converte de volta para BGR
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 50, 150)
+        frame = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
 
     # Realiza a detecção
-    results = model(frame)
+    results = model(frame, conf=0.05)
 
     detected_in_frame = False
     for result in results:
@@ -109,12 +105,14 @@ while cap.isOpened():
     if detected_in_frame:
         detection_count += 1
     else:
-        detection_count = max(0, detection_count - 1)
-    
-    if detection_count >= DETECTION_THRESHOLD:
+        detection_count = 0
+
+    # Envio do e-mail
+    if detection_count >= DETECTION_THRESHOLD and not alert_sent:
         print(f"[DETECÇÃO] Objeto cortante confirmado após {DETECTION_THRESHOLD} frames consecutivos.")
-        break
-    
+        send_alert(detected_objects)
+        alert_sent = True  # Evita envio duplicado
+
     cv2.imshow("Detecção", frame)
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
@@ -122,9 +120,9 @@ while cap.isOpened():
 cap.release()
 cv2.destroyAllWindows()
 
-# Enviar alerta ao final do processamento
-if detection_count >= DETECTION_THRESHOLD and not alert_sent:
+# Tratamento caso a detecção ocorra no penúltimo frame
+if not alert_sent and len(detected_objects) > 0:
+    print("[INFO] O vídeo terminou, mas objetos cortantes foram detectados. Enviando alerta...")
     send_alert(detected_objects)
-    alert_sent = True
 
 print("[INFO] Processamento do vídeo concluído.")
